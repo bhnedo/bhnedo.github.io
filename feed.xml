@@ -4,12 +4,33 @@
 <generator uri="https://github.com/jekyll/jekyll">Jekyll</generator>
 <link rel="self" type="application/atom+xml" href="/feed.xml" />
 <link rel="alternate" type="text/html" href="" />
-<updated>2015-01-28T21:55:04+01:00</updated>
+<updated>2015-01-29T19:02:54+01:00</updated>
 <id>/</id>
 <author>
   <name>Nedim Šabić</name>
   <uri>/</uri>
   <email>bhnedo@hotmail.com</email>
 </author>
+
+
+  
+
+<entry>
+  <title type="html"><![CDATA[Origins]]></title>
+  <link rel="alternate" type="text/html" href="/origins/" />
+  <id>/origins</id>
+  <published>2015-01-29T17:53:53+01:00</published>
+  <updated>2015-01-29T17:53:53+01:00</updated>
+  <author>
+    <name>Nedim Šabić</name>
+    <uri></uri>
+    <email>bhnedo@hotmail.com</email>
+  </author>
+  <content type="html">&lt;p&gt;
+I finally decided to go digital with what I called &lt;strong&gt;Rabbit Stack&lt;/strong&gt;. It will be a place where I'll be writing mostly about programming, devops, virtualization and similar IT freaky stuffs. Sometimes I will also write about album reviews, new bands I have discovered or some totally random stuff which would anyway be lost in the limbo of my mind. The blog is still under heavy development, but I'll try to work hard on it, so stay tuned...
+&lt;/p&gt;
+
+  &lt;p&gt;&lt;a href=&quot;/origins/&quot;&gt;Origins&lt;/a&gt; was originally published by Nedim Šabić at &lt;a href=&quot;&quot;&gt;Rabbit Stack&lt;/a&gt; on January 29, 2015.&lt;/p&gt;</content>
+</entry>
 
 </feed>
