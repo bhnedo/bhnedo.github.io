@@ -4,13 +4,380 @@
 <generator uri="https://github.com/jekyll/jekyll">Jekyll</generator>
 <link rel="self" type="application/atom+xml" href="/feed.xml" />
 <link rel="alternate" type="text/html" href="" />
-<updated>2015-01-29T19:02:54+01:00</updated>
+<updated>2015-02-01T18:40:34+01:00</updated>
 <id>/</id>
 <author>
   <name>Nedim Šabić</name>
   <uri>/</uri>
   <email>bhnedo@hotmail.com</email>
 </author>
+
+
+  
+
+<entry>
+  <title type="html"><![CDATA[Deploying Cloud Foundry on OpenStack Juno and XenServer (Part I)]]></title>
+  <link rel="alternate" type="text/html" href="/deploying-cloud-foundry-on-openstack-juno-and-xenserver-part-i/" />
+  <id>/deploying-cloud-foundry-on-openstack-juno-and-xenserver-part-i</id>
+  <published>2015-01-30T17:03:28+01:00</published>
+  <updated>2015-01-30T17:03:28+01:00</updated>
+  <author>
+    <name>Nedim Šabić</name>
+    <uri></uri>
+    <email>bhnedo@hotmail.com</email>
+  </author>
+  <content type="html">&lt;p&gt;
+&lt;a href=&quot;http://www.cloudfoundry.org/index.html&quot; target=&quot;_blank&quot;&gt;Cloud Foundry&lt;/a&gt; ecosystem had been blowing my mind for a long time, and I think it really has made an IT disruption letting us focus on applications as the essential unit of business process. There is no need for us to worry about all those painful stuffs like scalability, multi tenancy and application health. Cloud Foundry will do that nasty job for us, and much more. It could be considered as an operating system for the cloud.
+&lt;/p&gt;
+
+&lt;p&gt;
+While I was investigating about Cloud Foundry, I also figured out its agnostic nature which enable it to be easily deployed on AWS, vSphere or &lt;a href=&quot;https://www.openstack.org/&quot; target=&quot;_blank&quot;&gt;OpenStack&lt;/a&gt;. That is how I got motivated to acquire one of those cheap Dell rack servers on eBay and start the experiment. XenServer 6.2 is what I choose as hypervisor to be orchestrated by OpenStack. Unfortunately, the documentation about setting up the OpenStack compute node on XenServer is rather incomplete, deprecated and very hard to follow if you
+are doing it for the first time. So, let&#39;s see how to proceed step by step, and prepare our OpenStack environment for Cloud Foundry instance deployment. I already assume you have successfully installed and configured the controller node.
+&lt;/p&gt;
+
+&lt;h3&gt;Installing paravirtualized XenServer domain&lt;/h3&gt;
+
+&lt;p&gt; OpenStack compute node needs a paravirtualized virtual machine running on each XenServer instance. Paravirtualized VM basically has a recompiled kernel so it can talk directly to the hypervisor API. If Centos is your distribution of choice then the easiest way to set up a PV virtual machine is by using this &lt;a href=&quot;https://gist.githubusercontent.com/bhnedo/4648499f5680207e86ec/raw/4239fd8d0e10f7f2759d600b28b52f1744d9b5ad/kickstart-centos-minimal.cfg&quot; target=&quot;_blank&quot;&gt;kickstart&lt;/a&gt; file.&lt;/p&gt;
+&lt;p&gt;Let’s first create the VM. Please note we have to use Red Hat 6 template, even if we are going to install Centos 7 distribution. For XenServer 6.5 this is not necessary.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;TEMPLATE_UUID&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;$(&lt;/span&gt;xe template-list &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; grep -B1 &lt;span class=&quot;s1&quot;&gt;&amp;#39;name-label.*Red Hat.* 6.*64-bit&amp;#39;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; awk -F: &lt;span class=&quot;s1&quot;&gt;&amp;#39;/uuid/{print $2}&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; tr -d &lt;span class=&quot;s2&quot;&gt;&amp;quot; &amp;quot;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;VMUUID&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;$(&lt;/span&gt;xe vm-install new-name-label&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;compute&amp;quot;&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;template&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;TEMPLATE_UUID&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;})&lt;/span&gt;
+xe vm-param-set &lt;span class=&quot;nv&quot;&gt;uuid&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$VMUUID&lt;/span&gt; other-config:install-repository&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;http://mirror.centos.org/centos/7/os/x86_64
+xe vm-param-set &lt;span class=&quot;nv&quot;&gt;uuid&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$VMUUID&lt;/span&gt; PV-args&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;ks=https://gist.githubusercontent.com/bhnedo/4648499f5680207e86ec/raw/4239fd8d0e10f7f2759d600b28b52f1744d9b5ad/kickstart-centos-minimal.cfg ksdevice=eth0&amp;quot;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Find out the network UUID for the bridge that has access to the Internet. Note that one Xen bridge is created for every physical network adapter on your machine. Get a list of XenServer networks and store the UUID for the appropriate bridge (in most cases it will be &lt;code&gt;xenbr0&lt;/code&gt;).&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;xe network-list
+&lt;span class=&quot;nv&quot;&gt;NETUUID&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;$(&lt;/span&gt;xe network-list &lt;span class=&quot;nv&quot;&gt;bridge&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;xenbr0 --minimal&lt;span class=&quot;k&quot;&gt;)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Create a virtual network interface (VIF) and attach it to the virtual machine and network. Start the VM and watch the installation progress from XenCenter.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;xe vif-create vm-uuid&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$VMUUID&lt;/span&gt; network-uuid&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$NETUUID&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;mac&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;random &lt;span class=&quot;nv&quot;&gt;device&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;0
+xe vm-start &lt;span class=&quot;nv&quot;&gt;uuid&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$VMUUID&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;When installation process is done export the VM so we have the base image to use for the storage node too.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;xe vm-export &lt;span class=&quot;nv&quot;&gt;uuid&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$VMUUID&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;filename&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;openstack-juno-centos7.xva&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p class=&quot;notice&quot;&gt;
+&lt;strong&gt;Notice:&lt;/strong&gt; &lt;code&gt;PyGrub&lt;/code&gt; doesn&#39;t support &lt;code&gt;grub2&lt;/code&gt; boot loader. You will need to apply the following &lt;a href=&quot;https://github.com/xenserver/xen-4.3.pg/blob/bf5f09b1a8b5ad4086285ce926a2c2dae68771a1/pygrub-fix-for-rhel7.patch&quot; target=&quot;_blank&quot;&gt;patch&lt;/a&gt; in order to boot the VM properly. This issue has been corrected in XenServer 6.5 release.
+&lt;/p&gt;
+
+&lt;h3&gt;Installing and configuring compute service&lt;/h3&gt;
+
+&lt;p&gt;
+Once you have a running PV guest the next step is to install OpenStack plugins for XenServer Dom0. These will let the compute node to communicate with Xen XAPI in order to provision virtual machines, set up networking, storage, etc. Download the latest Openstack Juno branch, unzip and copy the content of &lt;code&gt;plugins/xenserver/xenapi/etc/xapi.d/plugins&lt;/code&gt; directory to&lt;code&gt;/etc/xapi.d/plugins&lt;/code&gt;. Also ensure that added files are executable.
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nb&quot;&gt;cd&lt;/span&gt; /tmp
+wget https://github.com/openstack/nova/archive/master.zip
+unzip master.zip
+cp /tmp/nova-juno-stable/plugins/xenserver/xenapi/etc/xapi.d/plugins/* /etc/xapi.d/plugins
+chmod a+x /etc/xapi.d/plugins/*&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+Log into your newly installed compute node (default password for the &lt;strong&gt;root&lt;/strong&gt; user is &lt;i&gt;changeit&lt;/i&gt;) and run these commands to enable OpenStack Juno repository and upgrade the packages on your host.
+&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;yum install http://rdo.fedorapeople.org/openstack-juno/rdo-release-juno.rpm
+yum upgrade&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If your kernel is upgraded you will probably need to reboot the machine after upgrade process in order to activate the new kernel. Now install the required packages for the compute hypervisor components and &lt;i&gt;nova-network&lt;/i&gt; legacy networking.
+&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;yum install openstack-nova-compute sysfsutils
+yum install openstack-nova-network openstack-nova-api&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt; Xenapi python package is also required, so install it using &lt;code&gt;pip&lt;/code&gt; package manager.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;easy_install pip
+pip install xenapi&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;blockquote&gt;
+I didn&#39;t wanted to setup another network node for &lt;strong&gt;Neutron&lt;/strong&gt;, even legacy networking is deprecated in favor of after-mentioned component. If you need advanced features like VLANs, virtual routing, switching, tenant isolation and so on, follow these &lt;a href=&quot;http://docs.openstack.org/juno/install-guide/install/yum/content/section_neutron-networking.html&quot; target=&quot;_blank&quot;&gt;docs&lt;/a&gt; on how to add Neutron network.
+&lt;/blockquote&gt;
+&lt;p&gt;
+Now we need to edit the &lt;code&gt;/etc/nova/nova.conf&lt;/code&gt; configuration file.
+&lt;/p&gt;
+&lt;ol&gt;
+	&lt;li&gt;
+		&lt;strong&gt;Message broker settings&lt;/strong&gt;
+		&lt;p&gt;Configure RabbitMQ messaging system in the &lt;code&gt;[DEFAULT]&lt;/code&gt; section:&lt;/p&gt;
+			&lt;pre&gt;
+ [DEFAULT]
+ rpc_backend = rabbit 
+ rabbit_host = controller 
+ rabbit_userid = RABBIT_USER 
+ rabbit_password = RABBIT_PASSWORD 
+ 			&lt;/pre&gt;
+			
+	&lt;/li&gt;
+	&lt;li&gt;
+		&lt;strong&gt;Keystone authentication&lt;/strong&gt;
+		&lt;p&gt;Modify &lt;code&gt;[DEFAULT]&lt;/code&gt; and &lt;code&gt;[keystone_authtoken]&lt;/code&gt; sections to configure authentication service access:&lt;/p&gt;
+			&lt;pre&gt;
+ [DEFAULT]
+ auth_strategy = keystone
+
+ [keystone_authtoken] 
+ auth_uri = http://controller:5000/v2.0
+ identity_uri = http://controller:35357
+ admin_tenant_name = service
+ admin_user = nova
+ admin_password = NOVA_PASSWORD
+		  &lt;/pre&gt;
+	&lt;/li&gt;
+	&lt;li&gt;
+		&lt;strong&gt;Network configuration&lt;/strong&gt;
+		&lt;p&gt;Before proceeding with network parameters, you will need to create a second VIF and attach it to the compute VM. &lt;/p&gt;
+		&lt;pre&gt;
+ $ xe vif-create vm-uuid=$VMUUID network-uuid=$NETUUID mac=random device=1
+ $ xe vm-start uuid=$VMUUID
+		&lt;/pre&gt;
+		&lt;p&gt; This network interface will be connected to the Linux bridge and at same time will act as default gateway for all VM instances spawned inside OpenStack. The traffic forwarding between tenants is done at L2 level through  this bridge. You should end up with the following interfaces and &lt;code&gt;xenbr0&lt;/code&gt; up after creating the network in OpenStack.
+		&lt;/p&gt;
+		&lt;pre&gt;
+ $ ifconfig
+ eth0: flags=4163&amp;lt;UP,BROADCAST,RUNNING,MULTICAST&amp;gt;  mtu 1500
+        inet 192.168.1.106  netmask 255.255.255.0  broadcast 192.168.1.255
+        inet6 fe80::90b3:8fff:fe2c:1d09  prefixlen 64  scopeid 0x20&lt;link /&gt;
+        ether 92:b3:8f:2c:1d:09  txqueuelen 1000  (Ethernet)
+        RX packets 3016  bytes 1189159 (1.1 MiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 2812  bytes 636656 (621.7 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+ eth1: flags=4163&amp;lt;UP,BROADCAST,RUNNING,MULTICAST&amp;gt;  mtu 1500
+        inet6 fe80::44ab:daff:fe21:46d4  prefixlen 64  scopeid 0x20&lt;link /&gt;
+        ether 46:ab:da:21:46:d4  txqueuelen 1000  (Ethernet)
+        RX packets 611  bytes 111213 (108.6 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 38  bytes 4943 (4.8 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+ xenbr0: flags=4163&amp;lt;UP,BROADCAST,RUNNING,MULTICAST&amp;gt;  mtu 1500
+        inet 192.168.1.50  netmask 255.255.255.0  broadcast 192.168.1.255
+        inet6 fe80::4034:39ff:fecd:b9b3  prefixlen 64  scopeid 0x20&lt;link /&gt;
+        ether 46:ab:da:21:46:d4  txqueuelen 0  (Ethernet)
+        RX packets 89  bytes 11222 (10.9 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 28  bytes 3967 (3.8 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+ $ brctl show
+ bridge name     bridge id               STP enabled                  interfaces
+ xenbr0          8000.46abda2146d4          no                         eth1
+		&lt;/pre&gt;
+		 &lt;p&gt;In the&lt;code&gt;[DEFAULT]&lt;/code&gt; section you will need to put these properties:&lt;/p&gt;
+			&lt;pre&gt;
+ [DEFAULT]
+ network_api_class = nova.network.api.API
+ security_group_api = nova
+ network_manager = nova.network.manager.FlatDHCPManager
+ allow_same_net_traffic = True
+ multi_host = True
+ send_arp_for_ha = True
+ share_dhcp_address = True
+ force_dhcp_release = True
+ flat_network_bridge = xenbr0
+ flat_interface = eth1
+ public_interface = eth0
+
+ my_ip = MANAGEMENT_INTERFACE_IP
+ firewall_driver = nova.virt.xenapi.firewall.Dom0IptablesFirewallDriver
+			&lt;/pre&gt;
+			
+	&lt;/li&gt;
+	&lt;li&gt;
+		&lt;strong&gt;Hypervisor settings&lt;/strong&gt;
+		&lt;p&gt;Enable Xen compute driver in the &lt;code&gt;[DEFAULT]&lt;/code&gt; section, XAPI endpoint and credentials in the &lt;code&gt;[xenserver]&lt;/code&gt; section:&lt;/p&gt;
+		&lt;pre&gt;
+ [DEFAULT]
+ compute_driver = xenapi.XenAPIDriver
+
+ [xenserver]
+ connection_url = http://XENSERVER_MANAGEMENT_IP
+ connection_username = XENSERVER_USERNAME
+ connection_password = XENSERVER_PASSWORD
+ 		&lt;/pre&gt;
+	&lt;/li&gt;
+	&lt;li&gt;
+		&lt;strong&gt;Image service and VNC access&lt;/strong&gt;
+		&lt;p&gt;We are almost done. In the &lt;code&gt;[glance]&lt;/code&gt; section configure the location of the Image Service. In the &lt;code&gt;[DEFAULT]&lt;/code&gt; section enable remote console access. When deploying OpenStack services for the first time, it&#39;s a good idea to enable verbose logging too.&lt;/p&gt;
+				&lt;pre&gt;
+ [glance]
+ host = controller
+ 
+ [DEFAULT]
+ vnc_enabled = True
+ vncserver_listen = 0.0.0.0
+ vncserver_proxyclient_address = MANAGEMENT_INTERFACE_IP
+ novncproxy_base_url = http://controller:6080/vnc_auto.html
+
+ verbose = true
+ 		&lt;/pre&gt;
+	&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Start the Compute and Network services and configure them to be automatically started at boot time.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;systemctl &lt;span class=&quot;nb&quot;&gt;enable &lt;/span&gt;openstack-nova-compute.service openstack-nova-network.service openstack-nova-metadata-api.service
+systemctl start openstack-nova-compute.service openstack-nova-network.service openstack-nova-metadata-api.service&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Make sure the &lt;code&gt;nova-compute&lt;/code&gt; and &lt;code&gt;nova-network&lt;/code&gt; are up and running by executing this command on the controller node:&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;nova service-list
++----+------------------+---------+----------+---------+-------+----------------------------+
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; Id &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; Binary           &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; Host    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; Zone     &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; Status  &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; State &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; Updated_at                 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
++----+------------------+---------+----------+---------+-------+----------------------------+
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;1&lt;/span&gt;  &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; nova-consoleauth &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; hydra   &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; internal &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; enabled &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; up    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 2015-01-31T17:57:06.000000 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;2&lt;/span&gt;  &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; nova-cert        &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; hydra   &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; internal &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; enabled &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; up    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 2015-01-31T17:57:06.000000 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;3&lt;/span&gt;  &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; nova-scheduler   &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; hydra   &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; internal &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; enabled &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; up    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 2015-01-31T17:57:06.000000 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;4&lt;/span&gt;  &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; nova-conductor   &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; hydra   &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; internal &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; enabled &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; up    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 2015-01-31T17:57:06.000000 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;5&lt;/span&gt;  &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; nova-compute     &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; compute &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; nova     &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; enabled &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; up    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 2015-01-31T17:57:07.000000 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;6&lt;/span&gt;  &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; nova-network     &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; compute &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; internal &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; enabled &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; up    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 2015-01-31T17:57:00.000000 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 
++----+------------------+---------+----------+---------+-------+----------------------------+-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3&gt;Installing and configuring storage node&lt;/h3&gt;
+
+&lt;p&gt;We can start by creating the storage node VM from the base template image we had exported. Run these commands in the XenServer console:
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;SRUUID&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;$(&lt;/span&gt;xe sr-list name-label&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;Local storage&amp;quot;&lt;/span&gt; --minimal&lt;span class=&quot;k&quot;&gt;)&lt;/span&gt;
+xe vm-import &lt;span class=&quot;nv&quot;&gt;filename&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;openstack-juno-centos7.xva &lt;span class=&quot;nv&quot;&gt;force&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;true &lt;/span&gt;sr-uuid&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$SRUUID&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;preserve&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;true&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+You will need to create and attach the VDI where &lt;i&gt;cinder&lt;/i&gt; volumes will be stored. Get the UUID of your newly imported VM, and then run
+these commands.
+&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;VDIUUID&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;$(&lt;/span&gt;xe vdi-create sr-uuid&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$SRUUID&lt;/span&gt; name-label&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;cinder&amp;quot;&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;type&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;user virtual-size&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;250GiB&lt;span class=&quot;k&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;VBDUUID&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;$(&lt;/span&gt;xe vbd-create vm-uuid&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$VMUUID&lt;/span&gt; vdi-uuid&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$VDIUUID&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;device&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;1&lt;span class=&quot;k&quot;&gt;)&lt;/span&gt;
+xe vbd-plug &lt;span class=&quot;nv&quot;&gt;uuid&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$VBDUUID&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;
+Install the required dependencies and start the LVM metadata service.
+&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;yum install lvm2
+systemctl &lt;span class=&quot;nb&quot;&gt;enable &lt;/span&gt;lvm2-lvmetad.service
+systemctl start lvm2-lvmetad.service&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;
+Partition the disk in order to create the LVM physical volume and the volume group labeled as &lt;code&gt; cinder-volumes &lt;/code&gt;. Change &lt;code&gt;/dev/xvdb1&lt;/code&gt; with your partition.
+&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;pvcreate /dev/xvdb1
+vgcreate cinder-volumes /dev/xvdb1&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;
+It is also necessary to instruct the LVM which block storage devices should be scanned. Edit the &lt;code&gt;/etc/lvm/lvm.conf&lt;/code&gt; file and modify the &lt;code&gt;filter&lt;/code&gt; section to include the created volume group.
+&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;devices &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  ...
+  &lt;span class=&quot;nv&quot;&gt;filter&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;a/xvda/&amp;quot;&lt;/span&gt;, &lt;span class=&quot;s2&quot;&gt;&amp;quot;a/xvdb/&amp;quot;&lt;/span&gt;, &lt;span class=&quot;s2&quot;&gt;&amp;quot;r/.*/&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+  ...
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;
+We are now ready to install and configure Block Storage components and dependencies. I wasn&#39;t able to get iSCSI LUNs to work using &lt;code&gt;targetcli&lt;/code&gt;, probably because XenServer rely on SCSI initiator utilities. The solution was to use &lt;code&gt;scsi-target-utils&lt;/code&gt; instead of it.
+&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;yum install scsi-target-utils
+yum install openstack-cinder python-oslo-db MySQL-python&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;
+Edit the &lt;code&gt;/etc/cinder/cinder.conf&lt;/code&gt; configuration file.
+&lt;/p&gt;
+&lt;ol&gt;
+	&lt;li&gt;
+		&lt;strong&gt;Message broker settings&lt;/strong&gt;
+		&lt;p&gt;Configure RabbitMQ messaging system in the &lt;code&gt;[DEFAULT]&lt;/code&gt; section:&lt;/p&gt;
+			&lt;pre&gt;
+ [DEFAULT]
+ rpc_backend = rabbit 
+ rabbit_host = controller 
+ rabbit_userid = RABBIT_USER 
+ rabbit_password = RABBIT_PASSWORD 
+ 			&lt;/pre&gt;
+			
+	&lt;/li&gt;
+	&lt;li&gt;
+		&lt;strong&gt;Keystone authentication&lt;/strong&gt;
+		&lt;p&gt;Modify &lt;code&gt;[DEFAULT]&lt;/code&gt; and &lt;code&gt;[keystone_authtoken]&lt;/code&gt; sections to configure authentication service access:&lt;/p&gt;
+			&lt;pre&gt;
+ [DEFAULT]
+ auth_strategy = keystone
+
+ [keystone_authtoken] 
+ auth_uri = http://controller:5000/v2.0
+ identity_uri = http://controller:35357
+ admin_tenant_name = service
+ admin_user = cinder
+ admin_password = CINDER_PASSWORD
+		  &lt;/pre&gt;
+	&lt;/li&gt;
+	&lt;li&gt;
+		&lt;strong&gt;Database connection&lt;/strong&gt;
+		&lt;p&gt;In the &lt;code&gt;[database]&lt;/code&gt; section change the MySQL connection string:&lt;/p&gt;
+		&lt;pre&gt;
+ [database]
+ connection = mysql://cinder:CINDER_DB_PASSWORD@controller/cinder
+ 		&lt;/pre&gt;
+	&lt;/li&gt;
+	&lt;li&gt;
+		&lt;strong&gt;Image service and management IP address&lt;/strong&gt;
+		&lt;p&gt;In the &lt;code&gt;[DEFAULT]&lt;/code&gt; section configure the location of the Image Service. Modify management interface address to match your storage node IP. Enable verbose logging.
+				&lt;pre&gt;
+ [DEFAULT]
+ host = controller
+ my_ip = MANAGEMENT_INTERFACE_IP
+ 
+ verbose = true
+ 		&lt;/pre&gt;
+	
+	&lt;li&gt;
+		&lt;strong&gt;Target administartion service&lt;/strong&gt;
+		&lt;p&gt;In the &lt;code&gt;[DEFAULT]&lt;/code&gt; configure Cinder to use &lt;code&gt;tgtadm&lt;/code&gt; service for iSCSI storage management:&lt;/p&gt;
+				&lt;pre&gt;
+ [DEFAULT]
+ iscsi_helper = tgtadm
+				&lt;/pre&gt;
+		&lt;p&gt; Edit the &lt;code&gt;/etc/tgt/targets.conf&lt;/code&gt; to include the cinder volumes. This will hold information about volume&#39;s location, CHAP credentials, IQNs, etc. &lt;/p&gt;
+		&lt;pre&gt;
+ include /etc/cinder/volumes/*
+		&lt;/pre&gt; 
+	&lt;/li&gt;
+
+
+&lt;p&gt;Start the Block Storage and target service and configure them to be automatically started at boot time.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;systemctl &lt;span class=&quot;nb&quot;&gt;enable &lt;/span&gt;openstack-cinder-volume.service tgtd.service
+systemctl start openstack-cinder-volume.service tgtd.service&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt; Run this command on the controller node to ensure the Storage service is up and running. &lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;cinder service-list
++------------------+--------+------+---------+-------+----------------------------+
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;      Binary      &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;  Host  &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; Zone &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;  Status &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; State &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;         Updated_at         &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
++------------------+--------+------+---------+-------+----------------------------+
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; cinder-scheduler &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; hydra  &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; nova &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; enabled &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;   up  &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 2015-01-31T17:57:44.000000 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;  cinder-volume   &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; cinder &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; nova &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; enabled &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;   up  &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 2015-01-31T17:57:55.000000 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
++------------------+--------+------+---------+-------+----------------------------+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+	
+
+&lt;p class=&quot;notice&quot;&gt;
+&lt;strong&gt;Tip:&lt;/strong&gt; If you are able to attach cinder volumes from OpenStack, but the file system creation is taking too long or got stuck, try to disable the checksumming of your storage node VIF. Use &lt;code&gt; ethtool -K vifz.0 tx off &lt;/code&gt; where &lt;code&gt;z&lt;/code&gt; is the domain identifier of the storage VM.
+&lt;/p&gt;
+
+&lt;h3&gt;Validate the OpenStack instance&lt;/h3&gt;
+
+&lt;p&gt; You should go through &lt;a href=&quot;http://docs.cloudfoundry.org/deploying/openstack/validate_openstack.html&quot; target=&quot;_blank&quot;&gt;this&lt;/a&gt; steps to validate your OpenStack environment. In the second part we will see how to deploy Cloud Foundry using &lt;strong&gt;BOSH&lt;/strong&gt; and push our first application. 
+&lt;/p&gt;
+&lt;br /&gt;
+&lt;/p&gt;&lt;/li&gt;&lt;/ol&gt;
+
+  &lt;p&gt;&lt;a href=&quot;/deploying-cloud-foundry-on-openstack-juno-and-xenserver-part-i/&quot;&gt;Deploying Cloud Foundry on OpenStack Juno and XenServer (Part I)&lt;/a&gt; was originally published by Nedim Šabić at &lt;a href=&quot;&quot;&gt;Rabbit Stack&lt;/a&gt; on January 30, 2015.&lt;/p&gt;</content>
+</entry>
 
 
   
@@ -27,7 +394,7 @@
     <email>bhnedo@hotmail.com</email>
   </author>
   <content type="html">&lt;p&gt;
-I finally decided to go digital with what I called &lt;strong&gt;Rabbit Stack&lt;/strong&gt;. It will be a place where I'll be writing mostly about programming, devops, virtualization and similar IT freaky stuffs. Sometimes I will also write about album reviews, new bands I have discovered or some totally random stuff which would anyway be lost in the limbo of my mind. The blog is still under heavy development, but I'll try to work hard on it, so stay tuned...
+I finally decided to go digital with what I called &lt;strong&gt;Rabbit Stack&lt;/strong&gt;. It will be a place where I&#39;ll be writing mostly about programming, devops, virtualization and similar IT freaky stuffs. Sometimes I will also write about album reviews, new bands I have discovered or some totally random stuff which would anyway be lost in the limbo of my mind. The blog is still under heavy development, but I&#39;ll try to work hard on it, so stay tuned...
 &lt;/p&gt;
 
   &lt;p&gt;&lt;a href=&quot;/origins/&quot;&gt;Origins&lt;/a&gt; was originally published by Nedim Šabić at &lt;a href=&quot;&quot;&gt;Rabbit Stack&lt;/a&gt; on January 29, 2015.&lt;/p&gt;</content>
