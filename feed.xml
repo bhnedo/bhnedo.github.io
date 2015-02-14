@@ -2,13 +2,13 @@
 <feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
 <title type="text">Rabbit Stack</title>
 <generator uri="https://github.com/jekyll/jekyll">Jekyll</generator>
-<link rel="self" type="application/atom+xml" href="/feed.xml" />
-<link rel="alternate" type="text/html" href="" />
-<updated>2015-02-01T18:40:34+01:00</updated>
-<id>/</id>
+<link rel="self" type="application/atom+xml" href="http://bhnedo.github.io/feed.xml" />
+<link rel="alternate" type="text/html" href="http://bhnedo.github.io" />
+<updated>2015-02-14T23:46:38+01:00</updated>
+<id>http://bhnedo.github.io/</id>
 <author>
   <name>Nedim Šabić</name>
-  <uri>/</uri>
+  <uri>http://bhnedo.github.io/</uri>
   <email>bhnedo@hotmail.com</email>
 </author>
 
@@ -16,14 +16,328 @@
   
 
 <entry>
+  <title type="html"><![CDATA[Deploying Cloud Foundry on OpenStack Juno and XenServer (Part II)]]></title>
+  <link rel="alternate" type="text/html" href="http://bhnedo.github.io/deploying-cloud-foundry-on-openstack-juno-and-xenserver-part-ii/" />
+  <id>http://bhnedo.github.io/deploying-cloud-foundry-on-openstack-juno-and-xenserver-part-ii</id>
+  <published>2015-02-14T11:48:52+01:00</published>
+  <updated>2015-02-14T11:48:52+01:00</updated>
+  <author>
+    <name>Nedim Šabić</name>
+    <uri>http://bhnedo.github.io</uri>
+    <email>bhnedo@hotmail.com</email>
+  </author>
+  <content type="html">&lt;p&gt;Let&#39;s move on. We should have our OpenStack instance prepared for Cloud Foundry. The most usual way of deploying Cloud Foundry is through &lt;strong&gt;BOSH&lt;/strong&gt;. For the who still didn&#39;t hear about it, &lt;a href=&quot;http://docs.cloudfoundry.org/bosh/about.html&quot; target=&quot;_blank&quot;&gt;BOSH&lt;/a&gt; is the platform for automation and lifecycle management of software and distributed services. It is also capable of monitoring and failure recovery of processes and virtual machines. There are already a few IT automation platforms in the market like &lt;a href=&quot;https://www.chef.io/&quot; target=&quot;_blank&quot;&gt;Chef&lt;/a&gt; or &lt;a href=&quot;http://puppetlabs.com/&quot; target=&quot;_blank&quot;&gt;Puppet&lt;/a&gt;, so, why to learn / use BOSH then?
+&lt;/p&gt;
+&lt;p&gt;
+One notable difference is that BOSH is able to perform the deployment from the sterile environment, i.e. package source code and dependencies, create the virtual machines (jobs in BOSH terminology) from &lt;i&gt;stemcell&lt;/i&gt; template (VM which has BOSH agent installed and is used to generate the jobs), and finally install, start and monitor the required services and VMs. Visit the official Cloud Foundry docs from the link above to learn more about BOSH.
+&lt;/p&gt;
+&lt;h3&gt;Deploying MicroBOSH&lt;/h3&gt;
+
+&lt;p&gt;MicroBOSH is a single VM which contains all the necessary components to boot BOSH, including the blobstore, nats, director, health manager etc. Once you have an instance of MicroBOSH running, you can deploy BOSH if you wish. Install BOSH CLI gems (Ruby &amp;gt;= 1.9.3 is required).&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;gem install bosh_cli bosh_cli_plugin_micro&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You will need to create a keypair in OpenStack and configure &lt;code&gt;bosh&lt;/code&gt; security group with the rules shown in the table below. You can do it by accessing the Horizon dashboard or by using &lt;code&gt;nova&lt;/code&gt; CLI.&lt;/p&gt;
+&lt;table rules=&quot;groups&quot;&gt;
+  &lt;thead&gt;
+      &lt;tr&gt;
+          &lt;th&gt;Direction&lt;/th&gt;
+          &lt;th&gt;IP Protocol&lt;/th&gt;
+          &lt;th&gt;Port Range&lt;/th&gt;
+          &lt;th&gt;Remote&lt;/th&gt;
+      &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+      &lt;tr&gt;&lt;td style=&quot;text-align:center&quot;&gt;Ingress&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;TCP&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;1-65535&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;bosh&lt;/td&gt;&lt;/tr&gt;
+      &lt;tr&gt;&lt;td style=&quot;text-align:center&quot;&gt;Ingress&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;TCP&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;53 (DNS)&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;0.0.0.0/0 (CIDR)&lt;/td&gt;&lt;/tr&gt;
+      &lt;tr&gt;&lt;td style=&quot;text-align:center&quot;&gt;Ingress&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;TCP&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;4222&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;0.0.0.0/0 (CIDR)&lt;/td&gt;&lt;/tr&gt;
+      &lt;tr&gt;&lt;td style=&quot;text-align:center&quot;&gt;Ingress&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;TCP&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;6868&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;0.0.0.0/0 (CIDR)&lt;/td&gt;&lt;/tr&gt;
+      &lt;tr&gt;&lt;td style=&quot;text-align:center&quot;&gt;Ingress&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;TCP&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;4222&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;0.0.0.0/0 (CIDR)&lt;/td&gt;&lt;/tr&gt;
+      &lt;tr&gt;&lt;td style=&quot;text-align:center&quot;&gt;Ingress&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;TCP&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;25250&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;0.0.0.0/0 (CIDR)&lt;/td&gt;&lt;/tr&gt;
+      &lt;tr&gt;&lt;td style=&quot;text-align:center&quot;&gt;Ingress&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;TCP&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;25555&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;0.0.0.0/0 (CIDR)&lt;/td&gt;&lt;/tr&gt;
+      &lt;tr&gt;&lt;td style=&quot;text-align:center&quot;&gt;Ingress&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;TCP&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;25777&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;0.0.0.0/0 (CIDR)&lt;/td&gt;&lt;/tr&gt;
+  &lt;/tbody&gt;
+       &lt;tr&gt;&lt;td style=&quot;text-align:center&quot;&gt;Ingress&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;UDP&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;53&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;0.0.0.0/0 (CIDR)&lt;/td&gt;&lt;/tr&gt;
+      &lt;tr&gt;&lt;td style=&quot;text-align:center&quot;&gt;Ingress&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;UDP&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;68&lt;/td&gt;&lt;td style=&quot;text-align:center&quot;&gt;0.0.0.0/0 (CIDR)&lt;/td&gt;&lt;/tr&gt;
+  &lt;tbody&gt;
+
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;nova keypair-add microbosh &amp;gt; microbosh.pem
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;chmod &lt;span class=&quot;m&quot;&gt;600&lt;/span&gt; microbosh.pem&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;BOSH uses a variety of artifacts in order to complete the deployment life cycle. We can basically distinguish between stemcell, release and deployment. To deploy MicroBOSH we will only need a stemcell which can be downloaded using the bosh CLI. First get a list of available stemcells and download the &lt;code&gt;bosh-stemcell-2839-openstack-kvm-centos-go_agent-raw.tgz&lt;/code&gt;.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;bosh public stemcells
++-----------------------------------------------------------------+
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; Name                                                            &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
++-----------------------------------------------------------------+
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2427-aws-xen-ubuntu.tgz                           &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2652-aws-xen-centos.tgz                           &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2839-aws-xen-centos-go_agent.tgz                  &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2427-aws-xen-ubuntu-go_agent.tgz                  &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2710-aws-xen-ubuntu-lucid-go_agent.tgz            &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2652-aws-xen-ubuntu-lucid.tgz                     &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2839-aws-xen-ubuntu-trusty-go_agent.tgz           &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2690.6-aws-xen-ubuntu-trusty-go_agent.tgz         &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2719.1-aws-xen-centos-go_agent.tgz                &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2719.1-aws-xen-ubuntu-trusty-go_agent.tgz         &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2719.2-aws-xen-centos-go_agent.tgz                &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2719.2-aws-xen-ubuntu-trusty-go_agent.tgz         &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2719.3-aws-xen-ubuntu-trusty-go_agent.tgz         &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; light-bosh-stemcell-2427-aws-xen-ubuntu.tgz                     &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; light-bosh-stemcell-2652-aws-xen-centos.tgz                     &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; light-bosh-stemcell-2839-aws-xen-centos-go_agent.tgz            &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; light-bosh-stemcell-2427-aws-xen-ubuntu-go_agent.tgz            &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; light-bosh-stemcell-2710-aws-xen-ubuntu-lucid-go_agent.tgz      &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; light-bosh-stemcell-2652-aws-xen-ubuntu-lucid.tgz               &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; light-bosh-stemcell-2839-aws-xen-ubuntu-trusty-go_agent.tgz     &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; light-bosh-stemcell-2690.6-aws-xen-ubuntu-trusty-go_agent.tgz   &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; light-bosh-stemcell-2719.1-aws-xen-centos-go_agent.tgz          &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; light-bosh-stemcell-2719.1-aws-xen-ubuntu-trusty-go_agent.tgz   &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; light-bosh-stemcell-2719.2-aws-xen-centos-go_agent.tgz          &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; light-bosh-stemcell-2719.2-aws-xen-ubuntu-trusty-go_agent.tgz   &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; light-bosh-stemcell-2719.3-aws-xen-ubuntu-trusty-go_agent.tgz   &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; light-bosh-stemcell-2839-aws-xen-hvm-centos-go_agent.tgz        &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; light-bosh-stemcell-2839-aws-xen-hvm-ubuntu-trusty-go_agent.tgz &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2427-openstack-kvm-ubuntu.tgz                     &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2624-openstack-kvm-centos.tgz                     &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2624-openstack-kvm-ubuntu-lucid.tgz               &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2839-openstack-kvm-centos-go_agent.tgz            &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2839-openstack-kvm-ubuntu-trusty-go_agent.tgz     &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2652-openstack-kvm-ubuntu-lucid-go_agent.tgz      &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2719.1-openstack-kvm-centos-go_agent.tgz          &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2719.1-openstack-kvm-ubuntu-trusty-go_agent.tgz   &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2719.2-openstack-kvm-centos-go_agent.tgz          &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2719.2-openstack-kvm-ubuntu-trusty-go_agent.tgz   &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2719.3-openstack-kvm-ubuntu-trusty-go_agent.tgz   &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2839-openstack-kvm-centos-go_agent-raw.tgz        &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2839-openstack-kvm-ubuntu-trusty-go_agent-raw.tgz &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2427-vcloud-esxi-ubuntu.tgz                       &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2652-vcloud-esxi-ubuntu-lucid.tgz                 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2839-vcloud-esxi-ubuntu-trusty-go_agent.tgz       &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2690.5-vcloud-esxi-ubuntu-trusty-go_agent.tgz     &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2690.6-vcloud-esxi-ubuntu-trusty-go_agent.tgz     &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2710-vcloud-esxi-ubuntu-lucid-go_agent.tgz        &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2427-vsphere-esxi-ubuntu.tgz                      &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2624-vsphere-esxi-centos.tgz                      &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2839-vsphere-esxi-centos-go_agent.tgz             &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2427-vsphere-esxi-ubuntu-go_agent.tgz             &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2710-vsphere-esxi-ubuntu-lucid-go_agent.tgz       &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2624-vsphere-esxi-ubuntu-lucid.tgz                &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2839-vsphere-esxi-ubuntu-trusty-go_agent.tgz      &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2719.1-vsphere-esxi-centos-go_agent.tgz           &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2719.1-vsphere-esxi-ubuntu-trusty-go_agent.tgz    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2719.2-vsphere-esxi-ubuntu-trusty-go_agent.tgz    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2719.2-vsphere-esxi-centos-go_agent.tgz           &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2719.3-vsphere-esxi-ubuntu-trusty-go_agent.tgz    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-2690.6-vsphere-esxi-ubuntu-trusty-go_agent.tgz    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-389-warden-boshlite-ubuntu-trusty-go_agent.tgz    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-53-warden-boshlite-ubuntu.tgz                     &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-389-warden-boshlite-centos-go_agent.tgz           &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bosh-stemcell-64-warden-boshlite-ubuntu-lucid-go_agent.tgz      &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
++-----------------------------------------------------------------+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;bosh download public stemcell bosh-stemcell-2839-openstack-kvm-centos-go_agent-raw.tgz
+bosh-stemcell:   4% &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;ooo                              &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;  24.4MB 753.0KB/s ETA:  00:11:43&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now we are ready to create the MicroBOSH deployment manifest &lt;code&gt;microbosh-openstack.yml&lt;/code&gt; file. You will need to change &lt;code&gt;net_id&lt;/code&gt; with your OpenStack instance network  identifier, &lt;code&gt;ip&lt;/code&gt; with the ip address from the network pool. You can find out that information by executing the following commands.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;nova network-list
++--------------------------------------+----------+----------------+
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; ID                                   &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; Label    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; Cidr           &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
++--------------------------------------+----------+----------------+
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 3f36d40e-1097-49a0-a023-4606dbf3a1f5 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; yuna-net &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 192.168.1.0/24 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
++--------------------------------------+----------+----------------+
+
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;nova network-show 3f36d40e-1097-49a0-a023-4606dbf3a1f5 
++---------------------+--------------------------------------+
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; Property            &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; Value                                &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
++---------------------+--------------------------------------+
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bridge              &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; xenbr0                               &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; bridge_interface    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; eth0                                 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; broadcast           &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 192.168.1.255                        &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; cidr                &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 192.168.1.0/24                       &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; cidr_v6             &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; -                                    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; created_at          &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 2014-12-28T17:18:14.000000           &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; deleted             &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; False                                &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; deleted_at          &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; -                                    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; dhcp_server         &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 192.168.1.50                         &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; dhcp_start          &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 192.168.1.51                         &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; dns1                &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 8.8.4.4                              &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; dns2                &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; -                                    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; enable_dhcp         &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; True                                 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; gateway             &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 192.168.1.50                         &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; gateway_v6          &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; -                                    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; host                &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; -                                    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; id                  &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 3f36d40e-1097-49a0-a023-4606dbf3a1f5 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; injected            &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; False                                &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; label               &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; yuna-net                             &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; mtu                 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; -                                    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; multi_host          &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; True                                 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; netmask             &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; 255.255.255.0                        &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; netmask_v6          &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; -                                    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; priority            &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; -                                    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; project_id          &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; -                                    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; rxtx_base           &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; -                                    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; share_address       &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; True                                 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; updated_at          &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; -                                    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; vlan                &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; -                                    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; vpn_private_address &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; -                                    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; vpn_public_address  &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; -                                    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; vpn_public_port     &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; -                                    &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;
++---------------------+--------------------------------------+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Under the &lt;code&gt;openstack&lt;/code&gt; section change the Identity service endpoint, OpenStack credentials, the private key location, and optionally set the timeout for OpenStack resources.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span class=&quot;nn&quot;&gt;---&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;microbosh-openstack&lt;/span&gt;
+
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;logging&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;DEBUG&lt;/span&gt;
+
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;network&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;type&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;manual&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;ip&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;192.168.1.55&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;cloud_properties&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;l-Scalar-Plain&quot;&gt;net_id&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;3f36d40e-1097-49a0-a023-4606dbf3a1f5&lt;/span&gt;
+
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;resources&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;persistent_disk&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;16384&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;cloud_properties&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;l-Scalar-Plain&quot;&gt;instance_type&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;m1.medium&lt;/span&gt;
+
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;cloud&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;plugin&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;openstack&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;properties&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;l-Scalar-Plain&quot;&gt;openstack&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;l-Scalar-Plain&quot;&gt;auth_url&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;http://controller:5000/v2.0&lt;/span&gt;
+      &lt;span class=&quot;l-Scalar-Plain&quot;&gt;username&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;admin&lt;/span&gt;
+      &lt;span class=&quot;l-Scalar-Plain&quot;&gt;api_key&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;admin&lt;/span&gt;
+      &lt;span class=&quot;l-Scalar-Plain&quot;&gt;tenant&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;admin&lt;/span&gt;
+      &lt;span class=&quot;l-Scalar-Plain&quot;&gt;default_security_groups&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;bosh&amp;quot;&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;]&lt;/span&gt;
+      &lt;span class=&quot;l-Scalar-Plain&quot;&gt;default_key_name&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;microbosh&lt;/span&gt;
+      &lt;span class=&quot;l-Scalar-Plain&quot;&gt;private_key&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;/root/microbosh.pem&lt;/span&gt;
+      &lt;span class=&quot;l-Scalar-Plain&quot;&gt;state_timeout&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;900&lt;/span&gt;
+
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;apply_spec&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;properties&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;l-Scalar-Plain&quot;&gt;director&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;l-Scalar-Plain&quot;&gt;max_threads&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;3&lt;/span&gt;
+    &lt;span class=&quot;l-Scalar-Plain&quot;&gt;hm&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;l-Scalar-Plain&quot;&gt;resurrector_enabled&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;true&lt;/span&gt;
+    &lt;span class=&quot;l-Scalar-Plain&quot;&gt;ntp&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;0.europe.pool.ntp.org&lt;/span&gt;
+      &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;1.europe.pool.ntp.org&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Finally, set the current deployment manifest file and deploy MicroBOSH.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;bosh micro deployment microbosh-openstack.yml
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;bosh micro deploy bosh-stemcell-2839-openstack-kvm-centos-go_agent-raw.tgz&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If everything goes well you should login into the MicroBOSH instance (use &lt;code&gt;admin&lt;/code&gt;, for both username and password).&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span class=&quot;l-Scalar-Plain&quot;&gt;$ bosh target 192.168.1.55&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;Target set to &amp;#39;microbosh-openstack&amp;#39;&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;Your username&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;admin&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;Enter password&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;*****&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;Logged in as &amp;#39;admin&amp;#39;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3&gt;Deploying Cloud Foundry&lt;/h3&gt;
+
+&lt;p&gt;Start by cloning the Cloud Foundry repository. Enter the newly created &lt;code&gt;cf-release&lt;/code&gt; directory and execute the &lt;code&gt;update&lt;/code&gt; script to update all submodules.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;git clone https://github.com/cloudfoundry/cf-release.git
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;cd &lt;/span&gt;cf-release
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;./update&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Upload the stemcell to the BOSH Director.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;bosh upload stemcell bosh-stemcell-2839-openstack-kvm-centos-go_agent-raw.tgz&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;In BOSH terminology, &lt;strong&gt;release&lt;/strong&gt; is a collection of packages and source code, dependencies, configuration properties, and any other components required to perform a deployment. To create a Cloud Foundry release, use this command from &lt;code&gt;cf-release&lt;/code&gt; directory.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;bosh create release&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This will download the required blobs from the S3 storage service and generate a release tarball. You should end up with the similar directory structures.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;bosh create release
+
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;ls blobs
+buildpack_cache    git           haproxy         mysql             php-buildpack     rootfs      ruby-buildpack
+cli                go-buildpack  java-buildpack  nginx             postgres          ruby        sqlite
+debian_nfs_server  golang        libyaml         nodejs-buildpack  python-buildpack  ruby-2.1.4  uaa
+
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;ls packages
+acceptance-tests        buildpack_python     dea_next             golang     loggregator_trafficcontroller  postgres        warden
+buildpack_cache         buildpack_ruby       debian_nfs_server    golang1.3  login                          rootfs_lucid64
+buildpack_go            cli                  doppler              gorouter   metron_agent                   ruby
+buildpack_java          cloud_controller_ng  etcd                 haproxy    mysqlclient                    ruby-2.1.4
+buildpack_java_offline  collector            etcd_metrics_server  hm9000     nats                           smoke-tests
+buildpack_nodejs        common               git                  libpq      nginx                          sqlite
+buildpack_php           dea_logging_agent    gnatsd               libyaml    nginx_newrelic_plugin          uaa&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now you can upload the release to the BOSH Director.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;bosh upload release&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The most complex part of Cloud Foundry BOSH deployment is the manifest file where all componentes are tied together - computing resource specifications, VMs, software releases, and configuration properties. You can use the deployment which worked great on my environment. Don’t forget to create &lt;code&gt;cf.small&lt;/code&gt; and &lt;code&gt;cf.medium&lt;/code&gt; flavors in OpenStack.&lt;/p&gt;
+
+&lt;script src=&quot;https://gist.github.com/bhnedo/3026f62119705d239863.js&quot;&gt; &lt;/script&gt;
+
+&lt;p&gt;Set and initiate the deploy. This process can take a few hours. Relax.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;bosh deployment cf-deployment.yml
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;bosh deploy&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3&gt;Pushing the application&lt;/h3&gt;
+
+&lt;p&gt;Download the &lt;code&gt;cf&lt;/code&gt; CLI from &lt;a href=&quot;https://github.com/cloudfoundry/cli/releases&quot; target=&quot;_blank&quot;&gt;https://github.com/cloudfoundry/cli/releases&lt;/a&gt;.
+
+Make sure you can access the API endpoint of the Cloud Foundry instance. If so, use &lt;code&gt;cf login&lt;/code&gt; with your username, organization and space.
+&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;curl http://api.192.168.1.249.xip.io/info
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;cf login -a api.192.168.1.249.xip.io -u user -o rabbitstack -s qa&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;To test our instance we are going to push a very simple &lt;code&gt;node.js&lt;/code&gt; app. Create a new directory and place &lt;code&gt;server.js&lt;/code&gt; and the application &lt;code&gt;manifest.yml&lt;/code&gt; file in it.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-js&quot; data-lang=&quot;js&quot;&gt;&lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;http&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;require&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;http&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+&lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;server&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;http&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;createServer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;req&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;res&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;res&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;writeHeader&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;200&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&amp;quot;Content-Type&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;text/html&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;res&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;end&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;Bunnies on Cloud Foundry. Port is &amp;quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;process&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;VCAP_APP_PORT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}).&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;listen&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;process&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;VCAP_APP_PORT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span class=&quot;nn&quot;&gt;---&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;applications&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+&lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;rabbitstack&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;path&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;.&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;memory&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;256M&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;instances&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;1&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;From within the directory run &lt;code&gt;cf push&lt;/code&gt; and access &lt;code&gt;http://rabbitstack.192.168.1.249.xip.io&lt;/code&gt; from the browser. Play with &lt;code&gt;cf scale&lt;/code&gt; and see how port number changes on every request.&lt;/p&gt;
+
+&lt;p&gt;Congratulations! You now have a fully functional private Cloud Foundry.&lt;/p&gt;
+
+  &lt;p&gt;&lt;a href=&quot;http://bhnedo.github.io/deploying-cloud-foundry-on-openstack-juno-and-xenserver-part-ii/&quot;&gt;Deploying Cloud Foundry on OpenStack Juno and XenServer (Part II)&lt;/a&gt; was originally published by Nedim Šabić at &lt;a href=&quot;http://bhnedo.github.io&quot;&gt;Rabbit Stack&lt;/a&gt; on February 14, 2015.&lt;/p&gt;</content>
+</entry>
+
+
+  
+
+<entry>
   <title type="html"><![CDATA[Deploying Cloud Foundry on OpenStack Juno and XenServer (Part I)]]></title>
-  <link rel="alternate" type="text/html" href="/deploying-cloud-foundry-on-openstack-juno-and-xenserver-part-i/" />
-  <id>/deploying-cloud-foundry-on-openstack-juno-and-xenserver-part-i</id>
+  <link rel="alternate" type="text/html" href="http://bhnedo.github.io/deploying-cloud-foundry-on-openstack-juno-and-xenserver-part-i/" />
+  <id>http://bhnedo.github.io/deploying-cloud-foundry-on-openstack-juno-and-xenserver-part-i</id>
   <published>2015-01-30T17:03:28+01:00</published>
   <updated>2015-01-30T17:03:28+01:00</updated>
   <author>
     <name>Nedim Šabić</name>
-    <uri></uri>
+    <uri>http://bhnedo.github.io</uri>
     <email>bhnedo@hotmail.com</email>
   </author>
   <content type="html">&lt;p&gt;
@@ -278,7 +592,7 @@ It is also necessary to instruct the LVM which block storage devices should be s
 &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;
-We are now ready to install and configure Block Storage components and dependencies. I wasn&#39;t able to get iSCSI LUNs to work using &lt;code&gt;targetcli&lt;/code&gt;, probably because XenServer rely on SCSI initiator utilities. The solution was to use &lt;code&gt;scsi-target-utils&lt;/code&gt; instead of it.
+We are now ready to install and configure Block Storage components and dependencies. I wasn&#39;t able to get iSCSI LUNs to work using &lt;code&gt;targetcli&lt;/code&gt;, probably because XenServer relies on SCSI initiator utilities. The solution was to use &lt;code&gt;scsi-target-utils&lt;/code&gt; instead of it.
 &lt;/p&gt;
 
 &lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;yum install scsi-target-utils
@@ -376,7 +690,7 @@ systemctl start openstack-cinder-volume.service tgtd.service&lt;/code&gt;&lt;/pr
 &lt;br /&gt;
 &lt;/p&gt;&lt;/li&gt;&lt;/ol&gt;
 
-  &lt;p&gt;&lt;a href=&quot;/deploying-cloud-foundry-on-openstack-juno-and-xenserver-part-i/&quot;&gt;Deploying Cloud Foundry on OpenStack Juno and XenServer (Part I)&lt;/a&gt; was originally published by Nedim Šabić at &lt;a href=&quot;&quot;&gt;Rabbit Stack&lt;/a&gt; on January 30, 2015.&lt;/p&gt;</content>
+  &lt;p&gt;&lt;a href=&quot;http://bhnedo.github.io/deploying-cloud-foundry-on-openstack-juno-and-xenserver-part-i/&quot;&gt;Deploying Cloud Foundry on OpenStack Juno and XenServer (Part I)&lt;/a&gt; was originally published by Nedim Šabić at &lt;a href=&quot;http://bhnedo.github.io&quot;&gt;Rabbit Stack&lt;/a&gt; on January 30, 2015.&lt;/p&gt;</content>
 </entry>
 
 
@@ -384,20 +698,20 @@ systemctl start openstack-cinder-volume.service tgtd.service&lt;/code&gt;&lt;/pr
 
 <entry>
   <title type="html"><![CDATA[Origins]]></title>
-  <link rel="alternate" type="text/html" href="/origins/" />
-  <id>/origins</id>
+  <link rel="alternate" type="text/html" href="http://bhnedo.github.io/origins/" />
+  <id>http://bhnedo.github.io/origins</id>
   <published>2015-01-29T17:53:53+01:00</published>
   <updated>2015-01-29T17:53:53+01:00</updated>
   <author>
     <name>Nedim Šabić</name>
-    <uri></uri>
+    <uri>http://bhnedo.github.io</uri>
     <email>bhnedo@hotmail.com</email>
   </author>
   <content type="html">&lt;p&gt;
 I finally decided to go digital with what I called &lt;strong&gt;Rabbit Stack&lt;/strong&gt;. It will be a place where I&#39;ll be writing mostly about programming, devops, virtualization and similar IT freaky stuffs. Sometimes I will also write about album reviews, new bands I have discovered or some totally random stuff which would anyway be lost in the limbo of my mind. The blog is still under heavy development, but I&#39;ll try to work hard on it, so stay tuned...
 &lt;/p&gt;
 
-  &lt;p&gt;&lt;a href=&quot;/origins/&quot;&gt;Origins&lt;/a&gt; was originally published by Nedim Šabić at &lt;a href=&quot;&quot;&gt;Rabbit Stack&lt;/a&gt; on January 29, 2015.&lt;/p&gt;</content>
+  &lt;p&gt;&lt;a href=&quot;http://bhnedo.github.io/origins/&quot;&gt;Origins&lt;/a&gt; was originally published by Nedim Šabić at &lt;a href=&quot;http://bhnedo.github.io&quot;&gt;Rabbit Stack&lt;/a&gt; on January 29, 2015.&lt;/p&gt;</content>
 </entry>
 
 </feed>
