@@ -226,6 +226,7 @@ Apart from computing, music is my another passion. I have been playing in a band
 
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 <script>window.jQuery || document.write('<script src="http://bhnedo.github.io/assets/js/vendor/jquery-1.9.1.min.js"><\/script>')</script>
+<script src="http://bhnedo.github.io/assets/js/plugins/jquery.magnific-popup.js"></script>
 <script src="http://bhnedo.github.io/assets/js/scripts.min.js"></script>
 
 <!-- Asynchronous Google Analytics snippet -->
@@ -242,6 +243,9 @@ Apart from computing, music is my another passion. I have been playing in a band
     ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
     var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
   })();
+  $(document).ready(function() {
+     $('.image-popup').magnificPopup({type:'image'});
+  });
 </script>
 
 

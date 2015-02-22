@@ -4,13 +4,112 @@
 <generator uri="https://github.com/jekyll/jekyll">Jekyll</generator>
 <link rel="self" type="application/atom+xml" href="http://bhnedo.github.io/feed.xml" />
 <link rel="alternate" type="text/html" href="http://bhnedo.github.io" />
-<updated>2015-02-14T23:46:38+01:00</updated>
+<updated>2015-02-22T18:13:28+01:00</updated>
 <id>http://bhnedo.github.io/</id>
 <author>
   <name>Nedim Šabić</name>
   <uri>http://bhnedo.github.io/</uri>
   <email>bhnedo@hotmail.com</email>
 </author>
+
+
+  
+
+<entry>
+  <title type="html"><![CDATA[Introduction to CQRS]]></title>
+  <link rel="alternate" type="text/html" href="http://bhnedo.github.io/introduction-to-cqrs/" />
+  <id>http://bhnedo.github.io/introduction-to-cqrs</id>
+  <published>2015-02-21T19:11:46+01:00</published>
+  <updated>2015-02-21T19:11:46+01:00</updated>
+  <author>
+    <name>Nedim Šabić</name>
+    <uri>http://bhnedo.github.io</uri>
+    <email>bhnedo@hotmail.com</email>
+  </author>
+  <content type="html">&lt;p&gt;
+In the world dominated by the IoT and the increasingly demanding users, the applications and the developers itself need to adapt a new paradigm to satisfy those needs. The users (customers) expectations are often very high as they want the contracted IT services highly available and the new feature requirements implemented as soon as possible. Besides that,
+project managers also want developers to complete the tasks in a time-constrained iterations guaranteeing the quality and good performance of the final product. Despite the increasing size and complexity of the applications, we still need to stay agile and deliver the product in established deadlines. Definitely, not a trivial task, at least not in a monolithic tightly coupled application architectures.
+&lt;/p&gt;
+&lt;p&gt;
+It is where &lt;strong&gt;CQRS&lt;/strong&gt; comes to the rescue. CQRS stands for &lt;i&gt;Command Query Responsibility Segregation&lt;/i&gt;, a design pattern with a very simple foundation: seperate the application into two parts - one that is responsible for executing actions and other one providing a thin data layer for query execution. So we have two models, the &lt;strong&gt;write&lt;/strong&gt; model and the &lt;strong&gt;read&lt;/strong&gt; model. Although at first glance may seem irrelevant, this approach opens up a plethora of possibilities. To better understand the CQRS paradigm, we will explain each of its building blocks with the help of the diagram below.
+&lt;/p&gt;
+
+&lt;figure&gt;
+	&lt;a href=&quot;/images/cqrs.jpg&quot; class=&quot;image-popup&quot;&gt;
+		&lt;img src=&quot;/images/cqrs.jpg&quot; /&gt;
+	&lt;/a&gt;
+	&lt;figcaption&gt;CQRS building blocks&lt;/figcaption&gt;
+&lt;/figure&gt;
+
+&lt;ul&gt;
+	&lt;li&gt;
+		&lt;strong&gt;Commands&lt;/strong&gt; are the objects that encapsulate both the user&#39;s intention as the information necessary to perform the operation. For example, &lt;code&gt;CreateNewUserCommand&lt;/code&gt; would hold a variety of attributes such as username, address, age, etc. Commands are sent to the command bus and later dispatched to its corresponding command handler. The state change in the system is started by executing the command.
+	&lt;/li&gt;
+	&lt;li&gt;
+		&lt;strong&gt;Domain model&lt;/strong&gt;  represents the heart of the system. Because the CQRS is based on its predecessor &lt;strong&gt;DDD&lt;/strong&gt; (Domain Driven Design) the main design approach
+		resides on the rich domain model. What does this mean? In traditional design, the domain objects often play the role of entities that just keep the system state and lack any kind of behavior, and thus is often called as &lt;i&gt;anemic&lt;/i&gt; domain model. This also tends to create ambiguity between the &lt;strong&gt;DTO&lt;/strong&gt; (Data Transfer Objects) and model objects, making the domain model end up having information that must be rendered in the view, and therefore create coupling. The dedicated service layer alters the system state. CQRS promotes a strictly behavior based domain model.
+	&lt;/li&gt;
+	&lt;li&gt;
+		&lt;strong&gt;Repositories&lt;/strong&gt; provide access to domain objects and allow isolating the domain model from persistence mechanism. Repositories just have to be able to recover the aggregate (domain object) from its unique identifier, while any other type of query is performed against read model.
+	&lt;/li&gt;
+	&lt;li&gt;
+		&lt;strong&gt;Events&lt;/strong&gt; are the source of any state changes in the application. As mentioned above, executing commands on aggregate, initiates the state change in the system, which in turn will produce a series of domain events. We don&#39;t need to persist domain objects but the generated domain events. With this we are able to reconstruct the domain object to its last state, just applying the stream of events on it. This pattern is known as &lt;i&gt;event sourcing&lt;/i&gt;. Events are sent to the event bus, and dispatched to any component interested in consuming it.
+	&lt;/li&gt;
+	&lt;li&gt;
+		&lt;strong&gt;Event store&lt;/strong&gt; provides a backing store for domain events. Those are often relational databases and NoSQL databases, but for the proof of concepts they can be implemented as file system stores.
+	&lt;/li&gt;
+	&lt;li&gt;
+		&lt;strong&gt;Queries&lt;/strong&gt; are executed against simple read-only data layer. The information needed to be rendered in the view is reflected in the object which contains the results of the query. We can say that the object is tailored for what view needs to represent.
+	&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3&gt;Advantages of CQRS&lt;/h3&gt;
+
+&lt;ul&gt;
+	&lt;li&gt;
+		Allows the application to be distributed across multiple physical or virtual machines (horizontal scalability).
+	&lt;/li&gt;
+	&lt;li&gt;
+		High availability at the application level. If one component fails, the rest of the system can still works.
+	&lt;/li&gt;
+	&lt;li&gt;
+		Audit / tracking / tracing of user actions out of the box. This type of audit is not comparable to any infrastructure log, since domain events add additional value to the business. It&#39;s easy to extract and ingest the domain events into machine-learning platforms or correlation engines, for example to predict user actions, detect anomalies, etc. By having the trace of everything that happens in the application, we have a single source of truth. It is also easier to reproduce the software failures.
+	&lt;/li&gt;
+	&lt;li&gt;
+		Instead of binding domain objects with UI components, we have simple DTO that accurately reflect what we want to represent in the view and it can be retrieved directly from the database. Thus, we can obtain all necessary information in a single request to the data source.
+	&lt;/li&gt;
+	&lt;li&gt;
+		CQRS help us to write an expressive domain model. It also puts the models on a &quot;diet&quot; since the models only need to have the attributes relevant for the business decision.
+	&lt;/li&gt;
+	&lt;li&gt;
+		When the command is about to be processed, the repository will get the stream of events related to the object from the event store. The object state is reconstructed from the event stream. Thus, we get the object in its original state and there will not need to provide persistence to the domain model.
+	&lt;/li&gt;
+	&lt;li&gt;
+		Separate data models. These remain consistent, synchronized and decoupled thanks to the domain events. For the read model you can use any technology, from JDBC, ORM systems through NoSQL solutions, since the only purpose is to populate the view with data as quickly as possible. We can have denormalized databases to optimize the reads and avoid complex queries with many unions.
+	&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3&gt;Disadvantages&lt;/h3&gt;
+
+&lt;p&gt;As there is no silver bullet for every scenario, you should keep in mind these considerations:&lt;/p&gt;
+
+&lt;ul&gt;
+	&lt;li&gt;
+		Use CQRS when the domain model is complex. A simple model is not going to benefit from this pattern.
+	&lt;/li&gt;
+	&lt;li&gt;
+		The learning curve is relatively high and it requires the change of the point of view regarding traditional design.
+	&lt;/li&gt;
+	&lt;li&gt;
+		Higher infrastructure requirements since we have two models (the read model and the write model).
+	&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3&gt;Conclusion&lt;/h3&gt;
+&lt;p&gt;Perhaps the time has come to change the traditional approach to software development? At the end, it is up to you. The benefits of CQRS are tremendous. It keeps the software maintainable, easily extensible and ready to face new challenges that the future holds. If your next project’s requirements are going to be complex, or you just need high availability and scalability at the application level and you want to grow without losing the agility, don’t hesitate, use CQRS.&lt;/p&gt;
+
+  &lt;p&gt;&lt;a href=&quot;http://bhnedo.github.io/introduction-to-cqrs/&quot;&gt;Introduction to CQRS&lt;/a&gt; was originally published by Nedim Šabić at &lt;a href=&quot;http://bhnedo.github.io&quot;&gt;Rabbit Stack&lt;/a&gt; on February 21, 2015.&lt;/p&gt;</content>
+</entry>
 
 
   
@@ -26,10 +125,10 @@
     <uri>http://bhnedo.github.io</uri>
     <email>bhnedo@hotmail.com</email>
   </author>
-  <content type="html">&lt;p&gt;Let&#39;s move on. We should have our OpenStack instance prepared for Cloud Foundry. The most usual way of deploying Cloud Foundry is through &lt;strong&gt;BOSH&lt;/strong&gt;. For the who still didn&#39;t hear about it, &lt;a href=&quot;http://docs.cloudfoundry.org/bosh/about.html&quot; target=&quot;_blank&quot;&gt;BOSH&lt;/a&gt; is the platform for automation and lifecycle management of software and distributed services. It is also capable of monitoring and failure recovery of processes and virtual machines. There are already a few IT automation platforms in the market like &lt;a href=&quot;https://www.chef.io/&quot; target=&quot;_blank&quot;&gt;Chef&lt;/a&gt; or &lt;a href=&quot;http://puppetlabs.com/&quot; target=&quot;_blank&quot;&gt;Puppet&lt;/a&gt;, so, why to learn / use BOSH then?
+  <content type="html">&lt;p&gt;Let&#39;s move on. We should have our OpenStack instance prepared for Cloud Foundry. The most usual way of deploying Cloud Foundry is through &lt;strong&gt;BOSH&lt;/strong&gt;. For the who still didn&#39;t hear about it, &lt;a href=&quot;http://bosh.io/docs&quot; target=&quot;_blank&quot;&gt;BOSH&lt;/a&gt; is the platform for automation and lifecycle management of software and distributed services. It is also capable of monitoring and failure recovery of processes and virtual machines. There are already a few IT automation platforms in the market like &lt;a href=&quot;https://www.chef.io/&quot; target=&quot;_blank&quot;&gt;Chef&lt;/a&gt; or &lt;a href=&quot;http://puppetlabs.com/&quot; target=&quot;_blank&quot;&gt;Puppet&lt;/a&gt;, so, why to learn / use BOSH then?
 &lt;/p&gt;
 &lt;p&gt;
-One notable difference is that BOSH is able to perform the deployment from the sterile environment, i.e. package source code and dependencies, create the virtual machines (jobs in BOSH terminology) from &lt;i&gt;stemcell&lt;/i&gt; template (VM which has BOSH agent installed and is used to generate the jobs), and finally install, start and monitor the required services and VMs. Visit the official Cloud Foundry docs from the link above to learn more about BOSH.
+One notable difference is that BOSH is able to perform the deployment from the sterile environment, i.e. package source code and dependencies, create the virtual machines (jobs in BOSH terminology) from the so called&lt;i&gt;stemcell&lt;/i&gt; template (VM which has BOSH agent installed and is used to generate the jobs), and finally install, start and monitor the required services and VMs. Visit the official page from the link above to learn more about BOSH.
 &lt;/p&gt;
 &lt;h3&gt;Deploying MicroBOSH&lt;/h3&gt;
 
@@ -262,9 +361,7 @@ bosh-stemcell:   4% &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;ooo           
 
 &lt;p&gt;This will download the required blobs from the S3 storage service and generate a release tarball. You should end up with the similar directory structures.&lt;/p&gt;
 
-&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;bosh create release
-
-&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;ls blobs
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;ls blobs
 buildpack_cache    git           haproxy         mysql             php-buildpack     rootfs      ruby-buildpack
 cli                go-buildpack  java-buildpack  nginx             postgres          ruby        sqlite
 debian_nfs_server  golang        libyaml         nodejs-buildpack  python-buildpack  ruby-2.1.4  uaa
@@ -282,7 +379,7 @@ buildpack_php           dea_logging_agent    gnatsd               libyaml    ngi
 
 &lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;bosh upload release&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
-&lt;p&gt;The most complex part of Cloud Foundry BOSH deployment is the manifest file where all componentes are tied together - computing resource specifications, VMs, software releases, and configuration properties. You can use the deployment which worked great on my environment. Don’t forget to create &lt;code&gt;cf.small&lt;/code&gt; and &lt;code&gt;cf.medium&lt;/code&gt; flavors in OpenStack.&lt;/p&gt;
+&lt;p&gt;The most complex part of Cloud Foundry BOSH deployment is the manifest file where all components are tied together - computing resource specifications, VMs, software releases, and configuration properties. You can use the deployment which worked great on my environment. Don’t forget to create &lt;code&gt;cf.small&lt;/code&gt; and &lt;code&gt;cf.medium&lt;/code&gt; flavors in OpenStack.&lt;/p&gt;
 
 &lt;script src=&quot;https://gist.github.com/bhnedo/3026f62119705d239863.js&quot;&gt; &lt;/script&gt;
 
@@ -291,7 +388,7 @@ buildpack_php           dea_logging_agent    gnatsd               libyaml    ngi
 &lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;bosh deployment cf-deployment.yml
 &lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;bosh deploy&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
-&lt;h3&gt;Pushing the application&lt;/h3&gt;
+&lt;h3&gt;Pushing an application&lt;/h3&gt;
 
 &lt;p&gt;Download the &lt;code&gt;cf&lt;/code&gt; CLI from &lt;a href=&quot;https://github.com/cloudfoundry/cli/releases&quot; target=&quot;_blank&quot;&gt;https://github.com/cloudfoundry/cli/releases&lt;/a&gt;.
 
@@ -320,8 +417,8 @@ Make sure you can access the API endpoint of the Cloud Foundry instance. If so, 
   &lt;span class=&quot;l-Scalar-Plain&quot;&gt;instances&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;1&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;From within the directory run &lt;code&gt;cf push&lt;/code&gt; and access &lt;code&gt;http://rabbitstack.192.168.1.249.xip.io&lt;/code&gt; from the browser. Play with &lt;code&gt;cf scale&lt;/code&gt; and see how port number changes on every request.&lt;/p&gt;
-
-&lt;p&gt;Congratulations! You now have a fully functional private Cloud Foundry.&lt;/p&gt;
+&lt;p&gt;&lt;br /&gt;
+Congratulations! You now have a fully functional private Cloud Foundry.&lt;/p&gt;
 
   &lt;p&gt;&lt;a href=&quot;http://bhnedo.github.io/deploying-cloud-foundry-on-openstack-juno-and-xenserver-part-ii/&quot;&gt;Deploying Cloud Foundry on OpenStack Juno and XenServer (Part II)&lt;/a&gt; was originally published by Nedim Šabić at &lt;a href=&quot;http://bhnedo.github.io&quot;&gt;Rabbit Stack&lt;/a&gt; on February 14, 2015.&lt;/p&gt;</content>
 </entry>
