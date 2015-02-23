@@ -194,7 +194,7 @@ It is where <strong>CQRS</strong> comes to the rescue. CQRS stands for <i>Comman
 		<strong>Repositories</strong> provide access to domain objects and allow isolating the domain model from persistence mechanism. Repositories just have to be able to recover the aggregate (domain object) from its unique identifier, while any other type of query is performed against read model.
 	</li>
 	<li>
-		<strong>Events</strong> are the source of any state changes in the application. As mentioned above, executing commands on aggregate, initiates the state change in the system, which in turn will produce a series of domain events. We don't need to persist domain objects but the generated domain events. With this we are able to reconstruct the domain object to its last state, just applying the stream of events on it. This pattern is known as <i>event sourcing</i>. Events are sent to the event bus, and dispatched to any component interested in consuming it.
+		<strong>Events</strong> are the source of any state changes in the application. As mentioned above, executing commands on aggregate, initiates the state change in the system, which in turn will produce a series of domain events. We don't need to persist domain objects but the generated domain events. With this we are able to reconstruct the domain object to its last state, just by applying the stream of events on it. This pattern is known as <i>event sourcing</i>. Events are sent to the event bus, and dispatched to any component interested in consuming it.
 	</li>
 	<li>
 		<strong>Event store</strong> provides a backing store for domain events. Those are often relational databases and NoSQL databases, but for the proof of concepts they can be implemented as file system stores.
